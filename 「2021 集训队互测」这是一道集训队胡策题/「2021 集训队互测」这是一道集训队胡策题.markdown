@@ -1,0 +1,168 @@
+# 「2021 集训队互测」这是一道集训队胡策题
+
+## Solution :
+
+> :star2: **<u>2 - Sat </u>**  
+
+##### Step 1:
+
+首先 ，我们不难发现 ，行与列之间是存在一定关系的。
+
+当一行被确定后 ，一些列也可能被确定 。
+
+同理 ，一些列被确定后 ，一些行也能被确定。`[推论1]`
+
+##### Step 2:
+
+构建 **2-sat** 模型 。
+
+我们可以只考虑 $1$ 的位置情况 。
+
+若 $c[i][j]$ == '1' , 构建边 $i -> (j + n)$ ，表示当 $i$ 行为 $0$ 成立时 ，$j$ 列必定为 $1$ 。
+
+同理 ，若 $c[i][j]$ == '0' , 构建边 $(j + n) -> i$ , 表示 $j$ 列为 $1$ 成立时 , $i$ 行必定为 $0$ 。
+
+这里是基本的 $2 -sat$ 建图思想 。
+
+##### Step 3:
+
+考虑缩点后 ，如何统计答案 。这里有一张图例 :
+
+<img title="" src="file:///C:/Users/lenovo/Desktop/头像/1.png" alt="" width="222" data-align="center">
+
+我们定义 :
+
+$\color{#FF0000}{红点}$ 为当前考虑的节点 。
+
+$\color{#33cc66}{绿点}$ 为当前节点的子节点。
+
+$\color{#9989ff}{蓝点}$ 为与当前点拓扑序相同但未在队列里的节点。
+
+$\color{#ff9933}{橙点}$ 为在队列中的节点。
+
+[注:] 这里的拓扑序是建立在缩点建边之后的拓扑序。
+
+----
+
+根据 $2-sat$ 的定义 ：**入度为 $0$ 的点是不受任何约束的** 。
+
+当 $\color{#FF0000}{红点}$ 被弹出后 ，即队列中的点都是入度为 $1$ 的 。
+
+故队列中的点必定可以任意选取 ，即有 $2^{q.size()}$ 中选择方式 。
+
+同时 ，由 $2-sat$ 的定义式 ，一旦 $\color{#FF0000}{红点}$ 点被确定 ，则其出边的节点也被确定 。
+
+以此类推 ，则以当前为起点的拓扑图将被确定 ，故当前点的贡献为 $2^{q.size()}$ 。
+
+因为当前 $\color{#FF0000}{红点}$ 不是其父亲节点的必要条件 , 故是一个新的相同的子问题 。
+
+则不断递推求解即可 。
+
+-----
+
+##### 综上所述 :
+
+对于任意队首元素的贡献即为$2^{q.size()}$ 。[这里的 $q.size()$ 同样也是出队之后的 $size$] 。
+
+-----
+
+##### Code :
+
+```cpp
+#include<bits/stdc++.h>
+using namespace std;
+#define open(x) freopen(x ".in", "r", stdin);freopen(x ".out", "w", stdout);
+#define pb emplace_back
+
+int clo = 0;
+const int p =998244353;
+const int MAXN = 1e5 + 5;
+int dfn[MAXN];
+int low[MAXN];
+int scc[MAXN];
+int instk[MAXN];
+int cnt = 0;
+vector<int> a[MAXN],e[MAXN];
+stack<int> stk;
+queue<int> q;
+int pw[MAXN],d[MAXN];
+int n;
+
+inline void dfs(int x){
+	dfn[x] = low[x] = ++clo;
+	stk.push(x);
+	instk[x] = 1;
+	for(auto v:a[x]){
+		if(!dfn[v]){
+			dfs(v);
+			low[x]=min(low[x],low[v]);
+		}
+		else if(instk[v]){
+			low[x] = min(low[x],dfn[v]);
+		}
+	}
+	if(low[x]==dfn[x]){
+		++cnt;
+		while(stk.top()!=x){
+			int t = stk.top();
+			stk.pop();
+			scc[t] = cnt;
+			instk[t]=0;
+		}
+		stk.pop();
+		scc[x] = cnt;
+		instk[x] = 0;
+	}
+	return;
+}
+
+signed main(){
+	ios::sync_with_stdio(false);
+	cin.tie(0);
+	cin >> n;
+	char c;
+	for(int i=1;i<=n; ++i) {
+		for(int j=1;j<=n;++j) {
+			cin >> c;
+			if(c == '1') a[i].pb(j+n);
+			else a[j+n].pb(i); 
+		}
+	}
+	for(int i = 1 ; i <= 2 * n ;++i){
+		if(!dfn[i]){
+			dfs(i);
+		}
+	}
+	for(int i=1;i<=2*n;++i){
+		for(auto v:a[i]){
+			if(scc[i]!=scc[v]){
+				e[scc[i]].pb(scc[v]);
+				d[scc[v]]++;
+			}
+		}
+	}
+	for(int i=1;i<=cnt;++i){
+		if(!d[i]) q.push(i);
+	}
+	int ans = 1;
+	pw[0]=1;
+	for(int i=1;i<=2*n;++i) pw[i]=pw[i-1]*2%p;
+	while(!q.empty()){
+		int t = q.front();
+		q.pop();
+		ans = (ans + pw[q.size()]%p)%p;
+		for(auto v:e[t]){
+			--d[v];
+			if(!d[v]) q.push(v);
+		}
+	}
+	cout << ans;
+	return 0;
+}
+```
+
+----
+
+##### More :
+
+这只是本题其中一种解题思路 (~~也是网上少有说明的解题思路~~)。
